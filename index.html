@@ -1,12 +1,686 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Website đầu tiên của Tiến Đạt</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Ghép Đơn (v3-Fix)</title>
+    <style>
+        /* --- Cài đặt Biến & Reset --- */
+        :root {
+            --bg-main: #f4f7fa;
+            --bg-panel: #ffffff;
+            --border-color: #e0e0e0;
+            --text-primary: #1a1a1a;
+            --text-secondary: #555;
+            --primary-color: #007bff;
+            --primary-color-hover: #0056b3;
+            --disabled-color: #c0c0c0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h2 {
+            font-size: 1.25rem;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        /* --- Layout 3 Cột Chính --- */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 280px 1fr 320px; /* Cột 1 | Cột 2 | Cột 3 */
+            gap: 20px;
+            width: 100%;
+            max-width: 1600px;
+            height: 85vh; /* Giới hạn chiều cao */
+            background-color: var(--bg-panel);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+            overflow: hidden; /* Quan trọng để các cột con scroll */
+        }
+
+        /* --- Panel chung --- */
+        .panel {
+            padding: 20px;
+            background-color: var(--bg-panel);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Cho phép scroll nội bộ */
+        }
+
+        .panel-content {
+            flex-grow: 1;
+            overflow-y: auto; /* Thêm scroll cho nội dung */
+        }
+
+        /* --- Cột 1: Bộ Lọc (Filters) --- */
+        .filters-panel {
+            border-right: 1px solid var(--border-color);
+        }
+
+        .filter-group {
+            margin-bottom: 20px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-color-hover);
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+            margin-top: 10px;
+        }
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        /* --- Cột 2: Không Gian Làm Việc (Workspace) --- */
+        .workspace-panel {
+            padding: 0; /* Xóa padding để tab dính vào cạnh */
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            background-color: #fcfcfc;
+        }
+
+        .tab-button {
+            padding: 14px 20px;
+            cursor: pointer;
+            background-color: transparent;
+            border: none;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-bottom: 3px solid transparent;
+            margin-bottom: -1px; /* Để border dính sát vạch */
+        }
+
+        .tab-button.active {
+            color: var(--primary-color);
+            font-weight: 600;
+            border-bottom-color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none; /* Ẩn mặc định */
+            padding: 20px;
+            height: calc(100% - 50px); /* Trừ đi chiều cao tab */
+            overflow-y: auto;
+        }
+
+        .tab-content.active {
+            display: block; /* Hiện tab được chọn */
+        }
+
+        /* Nội dung tab Bản đồ */
+        #map-placeholder {
+            width: 100%;
+            height: 100%;
+            background-color: #e9e9e9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 600;
+            color: #888;
+            border-radius: 4px;
+        }
+
+        /* Nội dung tab Danh sách */
+        .order-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .order-table th,
+        .order-table td {
+            text-align: left;
+            padding: 12px 10px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        .order-table th {
+            background-color: #f9f9f9;
+            font-weight: 600;
+        }
+
+        .order-table tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .order-table input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        /* --- Cột 3: Hành Động & Shipper --- */
+        .actions-panel {
+            border-left: 1px solid var(--border-color);
+            background-color: #fdfdfd;
+        }
+
+        #selected-summary {
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 10px;
+            background-color: #e6f2ff;
+            border: 1px solid #b3d7ff;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .shipper-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 10px;
+            background-color: var(--bg-panel);
+        }
+
+        .shipper-info strong {
+            display: block;
+            font-size: 1rem;
+        }
+        .shipper-info span {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .assign-btn {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 4px;
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+        }
+
+        /* Nút bị vô hiệu hóa (khi chưa chọn đơn) */
+        .assign-btn:disabled {
+            background-color: var(--disabled-color);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        /* --- Giao diện Modal (Pop-up xác nhận) --- */
+        .modal {
+            display: none; /* Ẩn mặc định */
+            position: fixed; /* Phủ lên toàn màn hình */
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5); /* Lớp nền mờ */
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 25px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            font-size: 1.3rem;
+        }
+
+        .close-btn {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-btn:hover,
+        .close-btn:focus {
+            color: black;
+        }
+
+        #modal-body-text {
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+    </style>
 </head>
 <body>
-  <h1>Chào mừng bạn đến với website của tôi!</h1>
-  <p>Được tạo bằng GitHub Pages 🚀</p>
+
+    <div class="dashboard-container">
+
+        <aside class="panel filters-panel">
+            <h2>Bộ lọc đơn hàng</h2>
+            <div class="panel-content">
+                <div class="filter-group">
+                    <label for="status-filter">Trạng thái đơn</label>
+                    <select id="status-filter">
+                        <option value="all">Tất cả trạng thái</option>
+                        <option value="pending" selected>Chờ xử lý</option>
+                        <option value="shipping">Đang giao</option>
+                        <option value="delivered">Đã giao</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="region-filter">Khu vực (Quận/Huyện)</label>
+                    <select id="region-filter">
+                        <option value="all">Tất cả khu vực</option>
+                        <option value="Q1">Quận 1</option>
+                        <option value="Q3">Quận 3</option>
+                        <option value="BinhThanh">Quận Bình Thạnh</option>
+                        <option value="GoVap">Quận Gò Vấp</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="route-filter">Tuyến đường</label>
+                    <select id="route-filter">
+                        <option value="all">Tất cả tuyến</option>
+                        <option value="route-a">Tuyến A - Sáng Q1</option>
+                        <option value="route-b">Tuyến B - Chiều Gò Vấp</option>
+                    </select>
+                </div>
+            </div>
+            <button id="filter-btn" class="btn btn-primary">Lọc Đơn Hàng</button>
+            <button id="clear-filter-btn" class="btn btn-secondary">Xóa Lọc</button>
+        </aside>
+
+        <main class="panel workspace-panel">
+            <div class="tabs">
+                <button class="tab-button" data-tab="map">Xem Bản Đồ</button>
+                <button class="tab-button active" data-tab="list">Xem Danh Sách</button>
+            </div>
+
+            <div id="tab-map" class="tab-content">
+                <div id="map-placeholder">
+                    Bản đồ (Google Maps API) sẽ hiện thị ở đây.
+                    <br>
+                </div>
+            </div>
+
+            <div id="tab-list" class="tab-content active">
+                <table class="order-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="select-all-checkbox"></th>
+                            <th>Mã Đơn</th>
+                            <th>Địa chỉ giao</th>
+                            <th>Khu vực</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody id="order-list-body">
+                        </tbody>
+                </table>
+            </div>
+        </main>
+
+        <aside class="panel actions-panel">
+            <h2>Gán Đơn Hàng</h2>
+            <div id="selected-summary">Đã chọn: 0 đơn hàng</div>
+            <div class="panel-content" id="shipper-list-container">
+                </div>
+        </aside>
+
+    </div>
+
+    <div id="confirmation-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Xác Nhận Gán Đơn</h3>
+                <span class="close-btn">&times;</span>
+            </div>
+            <p id="modal-body-text">Bạn có chắc muốn gán X đơn hàng cho Shipper Y?</p>
+            <div class="filter-group">
+                <label for="shipper-note">Ghi chú cho Shipper (tùy chọn):</label>
+                <input type="text" id="shipper-note" placeholder="Giao gấp trước 11h...">
+            </div>
+            <div class="modal-footer">
+                <button id="modal-cancel-btn" class="btn btn-secondary" style="width: 100px;">Hủy</button>
+                <button id="modal-confirm-btn" class="btn btn-primary" style="width: 150px;">Xác Nhận Gán</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- 1. DỮ LIỆU MẪU (Giả lập Database) ---
+
+        // Danh sách tất cả đơn hàng
+        const mockAllOrders = [
+            { id: '#123', address: '12 Nguyễn Thị Minh Khai, P. Đa Kao', region: 'Q1', status: 'pending', route: 'route-a' },
+            { id: '#124', address: '45 Võ Văn Tần, P. 6', region: 'Q3', status: 'pending', route: null },
+            { id: '#125', address: '88 Pasteur, P. Bến Nghé', region: 'Q1', status: 'pending', route: 'route-a' },
+            { id: '#126', address: '200 Lê Văn Sỹ, P. 14', region: 'Q3', status: 'pending', route: null },
+            { id: '#127', address: '180 Xô Viết Nghệ Tĩnh, P. 21', region: 'BinhThanh', status: 'pending', route: null },
+            { id: '#128', address: '50 Nguyễn Văn Đậu, P. 6', region: 'BinhThanh', status: 'shipping', route: null },
+            { id: '#129', address: '32 Trần Quốc Tuấn, P. 1', region: 'GoVap', status: 'pending', route: 'route-b' },
+            { id: '#130', address: '99 Mạc Đĩnh Chi, P. Đa Kao', region: 'Q1', status: 'delivered', route: 'route-a' },
+        ];
+
+        // Danh sách shipper
+        const mockShippers = [
+            { id: 'shipperA', name: 'Shipper A', status: 'Rảnh', load: '0/10' },
+            { id: 'shipperB', name: 'Shipper B', status: 'Bận', load: '10/10' },
+            { id: 'shipperC', name: 'Shipper C', status: 'Offline', load: '0/10' },
+        ];
+
+        // --- 2. BIẾN TRẠNG THÁI (State) ---
+        let currentFilteredOrders = []; 
+        let selectedOrderIds = new Set(); 
+        let shipperIdToAssign = null; 
+
+        // --- 3. LẤY CÁC PHẦN TỬ DOM CẦN THIẾT ---
+        const orderListBody = document.getElementById('order-list-body');
+        const shipperListContainer = document.getElementById('shipper-list-container');
+        const selectedSummary = document.getElementById('selected-summary');
+        const selectAllCheckbox = document.getElementById('select-all-checkbox');
+        
+        const filterBtn = document.getElementById('filter-btn');
+        const clearFilterBtn = document.getElementById('clear-filter-btn');
+        const statusFilter = document.getElementById('status-filter');
+        const regionFilter = document.getElementById('region-filter');
+        const routeFilter = document.getElementById('route-filter'); 
+
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        const modal = document.getElementById('confirmation-modal');
+        const modalBodyText = document.getElementById('modal-body-text');
+        const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+        const modalCancelBtn = document.getElementById('modal-cancel-btn');
+        const modalCloseBtn = document.querySelector('.close-btn');
+
+        // --- 4. CÁC HÀM VẼ GIAO DIỆN (Render Functions) ---
+
+        function renderOrderList(orders) {
+            orderListBody.innerHTML = ''; 
+
+            if (orders.length === 0) {
+                orderListBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">Không tìm thấy đơn hàng nào.</td></tr>';
+                return;
+            }
+
+            orders.forEach(order => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><input type="checkbox" class="order-checkbox" data-id="${order.id}"></td>
+                    <td>${order.id}</td>
+                    <td>${order.address}</td>
+                    <td>${order.region}</td>
+                    <td>${order.status}</td>
+                `;
+                
+                tr.querySelector('.order-checkbox').addEventListener('change', (e) => {
+                    handleCheckboxChange(e, order.id);
+                });
+                
+                orderListBody.appendChild(tr);
+            });
+        }
+
+        function renderShipperList() {
+            shipperListContainer.innerHTML = ''; 
+            mockShippers.forEach(shipper => {
+                const div = document.createElement('div');
+                div.className = 'shipper-item';
+                div.innerHTML = `
+                    <div class="shipper-info">
+                        <strong>${shipper.name}</strong>
+                        <span>Trạng thái: ${shipper.status} | Tải: ${shipper.load}</span>
+                    </div>
+                    <button class="btn assign-btn" data-shipper-id="${shipper.id}" data-shipper-name="${shipper.name}" disabled>
+                        Gán Đơn
+                    </button>
+                `;
+
+                div.querySelector('.assign-btn').addEventListener('click', (e) => {
+                    const id = e.target.dataset.shipperId;
+                    const name = e.target.dataset.shipperName;
+                    shipperIdToAssign = id; 
+                    showModal(name); 
+                });
+
+                shipperListContainer.appendChild(div);
+            });
+            
+            updateSelectionState();
+        }
+
+        // --- 5. CÁC HÀM XỬ LÝ SỰ KIỆN (Event Handlers) ---
+
+        function handleFilter() {
+            const status = statusFilter.value;
+            const region = regionFilter.value;
+            const route = routeFilter.value; 
+
+            currentFilteredOrders = mockAllOrders.filter(order => {
+                const statusMatch = (status === 'all') || (order.status === status);
+                const regionMatch = (region === 'all') || (order.region === region);
+                const routeMatch = (route === 'all') || (order.route === route);
+                
+                return statusMatch && regionMatch && routeMatch;
+            });
+
+            renderOrderList(currentFilteredOrders);
+            selectedOrderIds.clear();
+            selectAllCheckbox.checked = false;
+            updateSelectionState();
+        }
+
+        function handleClearFilter() {
+            statusFilter.value = 'all';
+            regionFilter.value = 'all';
+            routeFilter.value = 'all'; 
+            handleFilter();
+        }
+
+        function handleCheckboxChange(event, orderId) {
+            if (event.target.checked) {
+                selectedOrderIds.add(orderId);
+            } else {
+                selectedOrderIds.delete(orderId);
+            }
+            updateSelectionState();
+        }
+
+        function handleSelectAll(event) {
+            selectedOrderIds.clear(); 
+            const allCheckboxes = document.querySelectorAll('.order-checkbox');
+
+            if (event.target.checked) {
+                currentFilteredOrders.forEach(order => selectedOrderIds.add(order.id));
+                allCheckboxes.forEach(cb => cb.checked = true);
+            } else {
+                allCheckboxes.forEach(cb => cb.checked = false);
+            }
+            updateSelectionState();
+        }
+
+        /**
+         * Cập nhật trạng thái giao diện dựa trên số đơn đã chọn
+         */
+        function updateSelectionState() {
+            const selectedCount = selectedOrderIds.size;
+            
+            // 1. Cập nhật text "Đã chọn: X đơn hàng"
+            selectedSummary.textContent = `Đã chọn: ${selectedCount} đơn hàng`;
+
+            // 2. Cập nhật trạng thái các nút "Gán Đơn"
+            const assignButtons = document.querySelectorAll('.assign-btn');
+            const hasSelection = selectedCount > 0;
+
+            assignButtons.forEach(button => {
+                const shipperId = button.dataset.shipperId;
+                const shipper = mockShippers.find(s => s.id === shipperId);
+                
+                // =======================================================
+                // *** ĐÂY LÀ DÒNG ĐÃ SỬA LỖI ***
+                // Chỉ cho phép gán khi có đơn VÀ shipper đang "Rảnh"
+                if (hasSelection && shipper && shipper.status === 'Rảnh') {
+                // =======================================================
+                    button.disabled = false;
+                } else {
+                    button.disabled = true;
+                }
+            });
+
+            // 3. Cập nhật checkbox "Chọn tất cả"
+            if (currentFilteredOrders.length > 0 && selectedCount === currentFilteredOrders.length) {
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.checked = false;
+            }
+        }
+
+        function handleTabClick(event) {
+            const targetTab = event.target.dataset.tab;
+
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(`tab-${targetTab}`).classList.add('active');
+        }
+
+        // --- 6. XỬ LÝ MODAL ---
+
+        function showModal(shipperName) {
+            const count = selectedOrderIds.size;
+            modalBodyText.textContent = `Bạn có chắc muốn gán ${count} đơn hàng đã chọn cho ${shipperName}?`;
+            document.getElementById('shipper-note').value = ''; 
+            modal.style.display = 'flex'; 
+        }
+
+        function hideModal() {
+            modal.style.display = 'none';
+            shipperIdToAssign = null; 
+        }
+
+        function handleConfirmAssignment() {
+            const assignedCount = selectedOrderIds.size;
+            
+            const shipper = mockShippers.find(s => s.id === shipperIdToAssign);
+            if (shipper) {
+                const currentLoad = parseInt(shipper.load.split('/')[0]);
+                const maxLoad = parseInt(shipper.load.split('/')[1]);
+                const newLoad = currentLoad + assignedCount;
+
+                shipper.load = `${newLoad}/${maxLoad}`; 
+                if (newLoad >= maxLoad) {
+                    shipper.status = 'Bận'; 
+                }
+            }
+
+            mockAllOrders.forEach(order => {
+                if (selectedOrderIds.has(order.id)) {
+                    order.status = 'shipping'; 
+                }
+            });
+
+            hideModal();
+            selectedOrderIds.clear();
+
+            handleFilter();
+            renderShipperList(); // Vẽ lại list shipper để cập nhật Tải và Trạng thái
+        }
+
+        // --- 7. KHỞI CHẠY (Initialization) ---
+        document.addEventListener('DOMContentLoaded', () => {
+            filterBtn.addEventListener('click', handleFilter);
+            clearFilterBtn.addEventListener('click', handleClearFilter);
+            selectAllCheckbox.addEventListener('change', handleSelectAll);
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', handleTabClick);
+            });
+
+            modalCloseBtn.addEventListener('click', hideModal);
+            modalCancelBtn.addEventListener('click', hideModal);
+            modalConfirmBtn.addEventListener('click', handleConfirmAssignment);
+            
+            renderShipperList();
+            handleFilter(); 
+        });
+
+    </script>
 </body>
 </html>
